@@ -1,0 +1,21 @@
+const mongoose = require("mongoose");
+
+const verificationRequestSchema = new mongoose.Schema(
+  {
+    submittedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    partyId: { type: mongoose.Schema.Types.ObjectId, ref: "Party", default: null },
+    targetType: { type: String, enum: ["QUEST", "BAD_HABIT"], required: true },
+    targetId: { type: mongoose.Schema.Types.ObjectId, required: true },
+    proofFile: { type: String, default: null },
+    proofNote: { type: String, default: "" },
+    status: { type: String, enum: ["PENDING", "APPROVED", "REJECTED"], default: "PENDING" },
+    reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    reviewedAt: { type: Date, default: null },
+    reviewNote: { type: String, default: "" },
+    xpAmount: { type: Number, default: 0 },
+    mode: { type: String, enum: ["SOLO", "PARTY"], required: true },
+  },
+  { timestamps: true }
+);
+
+module.exports = mongoose.model("VerificationRequest", verificationRequestSchema);

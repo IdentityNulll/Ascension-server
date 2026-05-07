@@ -1,0 +1,11 @@
+const router = require("express").Router();
+const c = require("../controllers/questController");
+const { protect } = require("../middleware/auth");
+const upload = require("../utils/multer");
+router.get("/", protect, c.getQuests);
+router.post("/", protect, c.createQuest);
+router.patch("/:id", protect, c.updateQuest);
+router.delete("/:id", protect, c.deleteQuest);
+router.post("/:id/submit-proof", protect, upload.single("proof"), c.submitProof);
+router.post("/verification/:id/solo-approve", protect, c.soloApprove);
+module.exports = router;

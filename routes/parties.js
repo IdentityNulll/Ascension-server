@@ -1,0 +1,17 @@
+const router = require("express").Router();
+const c = require("../controllers/partyController");
+const { protect } = require("../middleware/auth");
+const upload = require("../utils/multer");
+router.get("/", protect, c.getParties);
+router.post("/", protect, c.createParty);
+router.post("/join", protect, c.joinByCode);
+router.get("/:id", protect, c.getParty);
+router.patch("/:id", protect, c.updateParty);
+router.post("/:id/invite", protect, c.inviteMember);
+router.post("/:id/leave", protect, c.leaveParty);
+router.delete("/:id/members/:userId", protect, c.removeMember);
+router.get("/:id/leaderboard", protect, c.getLeaderboard);
+router.get("/:id/quests", protect, c.getPartyQuests);
+router.post("/:id/quests", protect, c.createPartyQuest);
+router.post("/quests/:questId/submit-proof", protect, upload.single("proof"), c.submitPartyProof);
+module.exports = router;
