@@ -14,6 +14,8 @@ const ruleRoutes = require("./routes/rules");
 const shopRoutes = require("./routes/shop");
 const recordRoutes = require("./routes/records");
 const adminRoutes = require("./routes/admin");
+const notificationRoutes = require("./routes/notifications");
+const dailyGiftRoutes = require("./routes/dailyGift");
 
 const app = express();
 
@@ -31,6 +33,8 @@ app.use("/api/rules", ruleRoutes);
 app.use("/api/shop", shopRoutes);
 app.use("/api/records", recordRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/daily-gift", dailyGiftRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);

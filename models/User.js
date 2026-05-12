@@ -10,6 +10,7 @@ const userSchema = new mongoose.Schema(
     xp: { type: Number, default: 0, min: 0 },
     isActive: { type: Boolean, default: true },
     lastLoginAt: { type: Date },
+    lastDailyGiftClaimAt: { type: Date },
   },
   { timestamps: true }
 );

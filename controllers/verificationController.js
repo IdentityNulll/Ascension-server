@@ -1,7 +1,8 @@
 const VerificationRequest = require("../models/VerificationRequest");
 const Party = require("../models/Party");
 const { createRecord } = require("../utils/record");
-const { addXP, subtractXP } = require("../utils/xp");
+const { addXP, subtractXP, addPartyXP } = require("../utils/xp");
+const { createNotification } = require("./notificationController");
 
 const isMember = (party, userId) =>
   party.members.some((m) => m.userId.toString() === userId.toString());
@@ -15,8 +16,9 @@ exports.getPending = async (req, res) => {
       status: "PENDING",
       submittedBy: { $ne: req.user._id },
     })
-      .populate("submittedBy", "username")
+      .populate("submittedBy", "username email avatar")
       .populate("targetId")
+      .populate("partyId", "name")
       .sort({ createdAt: -1 });
     res.json({ success: true, data: pending });
   } catch (err) {
@@ -32,8 +34,9 @@ exports.getPartyVerifications = async (req, res) => {
     const verifications = await VerificationRequest.find({
       partyId: req.params.id,
     })
-      .populate("submittedBy", "username")
+      .populate("submittedBy", "username email avatar")
       .populate("reviewedBy", "username")
+      .populate("targetId")
       .sort({ createdAt: -1 });
     res.json({ success: true, data: verifications });
   } catch (err) {
@@ -82,6 +85,19 @@ exports.approve = async (req, res) => {
       message: `Proof approved. +${verification.xpAmount} XP`,
       metadata: { reviewedBy: req.user._id },
     });
+
+    if (verification.partyId) {
+      await addPartyXP(verification.partyId, verification.submittedBy, verification.xpAmount);
+    }
+
+    await createNotification({
+      userId: verification.submittedBy,
+      type: "PROOF_APPROVED",
+      title: "Proof Approved!",
+      message: `Your proof for quest was approved by ${req.user.username}. +${verification.xpAmount} XP`,
+      link: `/records`,
+    });
+
     res.json({ success: true, data: { verification, newXP: user?.xp } });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -118,6 +134,15 @@ exports.reject = async (req, res) => {
       message: `Proof rejected.`,
       metadata: { reviewedBy: req.user._id },
     });
+
+    await createNotification({
+      userId: verification.submittedBy,
+      type: "PROOF_REJECTED",
+      title: "Proof Rejected",
+      message: `Your proof for quest was rejected by ${req.user.username}. Reason: ${verification.reviewNote || "No reason provided"}`,
+      link: `/verifications`,
+    });
+
     res.json({ success: true, data: verification });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

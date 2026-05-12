@@ -14,4 +14,5 @@ router.get("/:id/leaderboard", protect, c.getLeaderboard);
 router.get("/:id/quests", protect, c.getPartyQuests);
 router.post("/:id/quests", protect, c.createPartyQuest);
 router.post("/quests/:questId/submit-proof", protect, upload.single("proof"), c.submitPartyProof);
+router.delete("/:id", protect, c.deleteParty);
 module.exports = router;

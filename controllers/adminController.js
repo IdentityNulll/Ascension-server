@@ -6,6 +6,7 @@ const ShopItem = require("../models/ShopItem");
 const Party = require("../models/Party");
 const Record = require("../models/Record");
 const VerificationRequest = require("../models/VerificationRequest");
+const { createNotification } = require("./notificationController");
 
 exports.dashboard = async (req, res) => {
   try {
@@ -72,6 +73,19 @@ exports.createSystemQuest = async (req, res) => {
     const { title, description, category, xpReward, cooldownHours } = req.body;
     if (!title || !xpReward) return res.status(400).json({ success: false, message: "Title and XP reward required" });
     const quest = await Quest.create({ title, description, category, xpReward: Number(xpReward), type: "SYSTEM", isSystem: true, cooldownHours: Number(cooldownHours) || 0, createdBy: req.user._id });
+    
+    // Notify all users
+    const allUsers = await User.find({ isActive: true });
+    for (const u of allUsers) {
+      await createNotification({
+        userId: u._id,
+        type: "SYSTEM_QUEST_AVAILABLE",
+        title: "New System Quest!",
+        message: `A new quest is available: ${title}`,
+        link: "/quests",
+      });
+    }
+
     res.status(201).json({ success: true, data: quest });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -115,6 +129,19 @@ exports.createSystemShop = async (req, res) => {
     const { title, description, xpCost, cooldownHours } = req.body;
     if (!title || !xpCost) return res.status(400).json({ success: false, message: "Title and XP cost required" });
     const item = await ShopItem.create({ title, description, xpCost: Number(xpCost), cooldownHours: Number(cooldownHours) || 0, isSystem: true, createdBy: req.user._id });
+    
+    // Notify all users
+    const allUsers = await User.find({ isActive: true });
+    for (const u of allUsers) {
+      await createNotification({
+        userId: u._id,
+        type: "SYSTEM_SHOP_AVAILABLE",
+        title: "New Shop Item!",
+        message: `A new item is available in the shop: ${title}`,
+        link: "/shop",
+      });
+    }
+
     res.status(201).json({ success: true, data: item });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

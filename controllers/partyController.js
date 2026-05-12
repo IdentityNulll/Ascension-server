@@ -3,6 +3,7 @@ const User = require("../models/User");
 const Quest = require("../models/Quest");
 const VerificationRequest = require("../models/VerificationRequest");
 const Record = require("../models/Record");
+const { createNotification } = require("./notificationController");
 const { createRecord } = require("../utils/record");
 const { addXP, subtractXP } = require("../utils/xp");
 const upload = require("../utils/multer");
@@ -15,7 +16,7 @@ const isMember = (party, userId) =>
 
 exports.getParties = async (req, res) => {
   try {
-    const parties = await Party.find({ "members.userId": req.user._id }).populate("members.userId", "username xp");
+    const parties = await Party.find({ "members.userId": req.user._id, isActive: { $ne: false } }).populate("members.userId", "username xp");
     res.json({ success: true, data: parties });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -72,6 +73,13 @@ exports.inviteMember = async (req, res) => {
     party.members.push({ userId: target._id, role: "MEMBER" });
     await party.save();
     await createRecord({ userId: target._id, partyId: party._id, action: "PARTY_JOINED", targetType: "PARTY", targetId: party._id, message: `Joined party: ${party.name}` });
+    await createNotification({
+      userId: target._id,
+      type: "PARTY_INVITATION",
+      title: "New Party Invitation",
+      message: `You have been added to the party: ${party.name}`,
+      link: `/parties/${party._id}`,
+    });
     res.json({ success: true, data: party });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -124,18 +132,17 @@ exports.removeMember = async (req, res) => {
 
 exports.getLeaderboard = async (req, res) => {
   try {
-    const party = await Party.findById(req.params.id).populate("members.userId", "username xp");
+    const party = await Party.findById(req.params.id).populate("members.userId", "username xp avatar");
     if (!party) return res.status(404).json({ success: false, message: "Party not found" });
     if (!isMember(party, req.user._id)) return res.status(403).json({ success: false, message: "Not a member" });
-    const memberIds = party.members.map((m) => m.userId._id);
-    const xpData = await Record.aggregate([
-      { $match: { partyId: party._id, action: "QUEST_APPROVED", xpChange: { $gt: 0 }, userId: { $in: memberIds } } },
-      { $group: { _id: "$userId", totalXP: { $sum: "$xpChange" } } },
-    ]);
-    const board = party.members.map((m) => {
-      const entry = xpData.find((e) => e._id.toString() === m.userId._id.toString());
-      return { user: m.userId, partyXP: entry?.totalXP || 0 };
-    }).sort((a, b) => b.partyXP - a.partyXP);
+
+    const board = party.members
+      .map((m) => ({
+        user: m.userId,
+        partyXP: m.xpEarned || 0,
+      }))
+      .sort((a, b) => b.partyXP - a.partyXP);
+
     res.json({ success: true, data: board });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -177,7 +184,64 @@ exports.submitPartyProof = async (req, res) => {
     const proofNote = req.body.note || "";
     const verification = await VerificationRequest.create({ submittedBy: req.user._id, partyId: quest.partyId, targetType: "QUEST", targetId: quest._id, proofFile, proofNote, xpAmount: quest.xpReward, mode: "PARTY" });
     await createRecord({ userId: req.user._id, partyId: quest.partyId, action: "PROOF_SUBMITTED", targetType: "QUEST", targetId: quest._id, message: `Party proof submitted for: ${quest.title}` });
+    
+    // Notify other members
+    const otherMembers = party.members.filter(m => m.userId.toString() !== req.user._id.toString());
+    for (const member of otherMembers) {
+      await createNotification({
+        userId: member.userId,
+        type: "PARTY_VERIFICATION_REQUEST",
+        title: "Proof Verification Needed",
+        message: `${req.user.username} submitted proof for quest: ${quest.title}`,
+        link: `/verifications`,
+      });
+    }
+
     res.status(201).json({ success: true, data: verification });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.deleteParty = async (req, res) => {
+  try {
+    const party = await Party.findById(req.params.id);
+    if (!party) return res.status(404).json({ success: false, message: "Party not found" });
+    if (party.ownerId.toString() !== req.user._id.toString() && req.user.role !== "ADMIN") {
+      return res.status(403).json({ success: false, message: "Only owner or admin can delete" });
+    }
+
+    party.isActive = false;
+    await party.save();
+
+    // Cancel pending verifications
+    await VerificationRequest.updateMany(
+      { partyId: party._id, status: "PENDING" },
+      { status: "REJECTED", reviewNote: "Party deleted" }
+    );
+
+    // Notify members
+    for (const member of party.members) {
+      if (member.userId.toString() !== req.user._id.toString()) {
+        await createNotification({
+          userId: member.userId,
+          type: "XP_EVENT",
+          title: "Party Deleted",
+          message: `The party "${party.name}" has been deleted by the owner.`,
+        });
+      }
+    }
+
+    await createRecord({
+      userId: req.user._id,
+      partyId: party._id,
+      action: "PARTY_DELETED",
+      targetType: "PARTY",
+      targetId: party._id,
+      message: `Party deleted: ${party.name}`,
+    });
+
+    res.json({ success: true, message: "Party deleted successfully" });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
