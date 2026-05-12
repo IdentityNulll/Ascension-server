@@ -119,11 +119,21 @@ exports.reject = async (req, res) => {
       return res
         .status(403)
         .json({ success: false, message: "Cannot reject your own submission" });
+
+    if (verification.partyId) {
+      const party = await Party.findById(verification.partyId);
+      if (!party || !isMember(party, req.user._id))
+        return res
+          .status(403)
+          .json({ success: false, message: "Only party members can reject" });
+    }
+
     verification.status = "REJECTED";
     verification.reviewedBy = req.user._id;
     verification.reviewedAt = new Date();
     verification.reviewNote = req.body.note || "";
     await verification.save();
+
     await createRecord({
       userId: verification.submittedBy,
       partyId: verification.partyId,
@@ -132,7 +142,7 @@ exports.reject = async (req, res) => {
       targetId: verification.targetId,
       xpChange: 0,
       message: `Proof rejected.`,
-      metadata: { reviewedBy: req.user._id },
+      metadata: { reviewedBy: req.user._id, reviewNote: verification.reviewNote },
     });
 
     await createNotification({
@@ -140,7 +150,7 @@ exports.reject = async (req, res) => {
       type: "PROOF_REJECTED",
       title: "Proof Rejected",
       message: `Your proof for quest was rejected by ${req.user.username}. Reason: ${verification.reviewNote || "No reason provided"}`,
-      link: `/verifications`,
+      link: `/app/verifications`,
     });
 
     res.json({ success: true, data: verification });

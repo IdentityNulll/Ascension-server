@@ -1,11 +1,22 @@
 const Rule = require("../models/Rule");
+const SystemRule = require("../models/SystemRule");
 const { createRecord } = require("../utils/record");
 const { subtractXP } = require("../utils/xp");
 
 exports.getRules = async (req, res) => {
   try {
     const rules = await Rule.find({ $or: [{ createdBy: req.user._id }, { isSystem: true }] }).sort({ createdAt: -1 });
-    res.json({ success: true, data: rules });
+    const autoRules = await SystemRule.find({ isEnabled: true });
+    
+    // Map autoRules to look like normal rules but with special flag
+    const mappedAuto = autoRules.map(r => ({
+      ...r.toObject(),
+      isAutomated: true,
+      isSystem: true,
+      xpPenalty: r.penaltyXP, // Normalize field name
+    }));
+
+    res.json({ success: true, data: [...mappedAuto, ...rules] });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

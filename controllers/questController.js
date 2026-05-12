@@ -69,6 +69,7 @@ exports.submitProof = async (req, res) => {
       proofNote,
       xpAmount: quest.xpReward,
       mode: "SOLO",
+      verificationType: "ADMIN",
     });
     await createRecord({ userId: req.user._id, action: "PROOF_SUBMITTED", targetType: "QUEST", targetId: quest._id, message: `Proof submitted for: ${quest.title}` });
     res.status(201).json({ success: true, data: verification });
@@ -78,17 +79,5 @@ exports.submitProof = async (req, res) => {
 };
 
 exports.soloApprove = async (req, res) => {
-  try {
-    const verification = await VerificationRequest.findOne({ _id: req.params.id, submittedBy: req.user._id, mode: "SOLO", status: "PENDING" });
-    if (!verification) return res.status(404).json({ success: false, message: "Verification not found" });
-    verification.status = "APPROVED";
-    verification.reviewedAt = new Date();
-    verification.reviewNote = "Solo self-approval (AI placeholder)";
-    await verification.save();
-    const user = await addXP(req.user._id, verification.xpAmount);
-    await createRecord({ userId: req.user._id, action: "QUEST_APPROVED", targetType: "QUEST", targetId: verification.targetId, xpChange: verification.xpAmount, message: `Quest approved (AI placeholder). +${verification.xpAmount} XP` });
-    res.json({ success: true, data: { verification, xp: user.xp } });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
+  return res.status(403).json({ success: false, message: "AI verification is currently disabled. Please wait for admin review." });
 };

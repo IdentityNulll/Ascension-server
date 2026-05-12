@@ -14,6 +14,7 @@ const verificationRequestSchema = new mongoose.Schema(
     reviewNote: { type: String, default: "" },
     xpAmount: { type: Number, default: 0 },
     mode: { type: String, enum: ["SOLO", "PARTY"], required: true },
+    verificationType: { type: String, enum: ["ADMIN", "PARTY_MEMBER"], default: "PARTY_MEMBER" },
   },
   { timestamps: true }
 );

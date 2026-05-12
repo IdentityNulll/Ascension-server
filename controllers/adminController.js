@@ -6,7 +6,10 @@ const ShopItem = require("../models/ShopItem");
 const Party = require("../models/Party");
 const Record = require("../models/Record");
 const VerificationRequest = require("../models/VerificationRequest");
+const SystemRule = require("../models/SystemRule");
 const { createNotification } = require("./notificationController");
+const { addXP } = require("../utils/xp");
+const { createRecord } = require("../utils/record");
 
 exports.dashboard = async (req, res) => {
   try {
@@ -213,6 +216,127 @@ exports.deleteSystemRule = async (req, res) => {
     const rule = await Rule.findOneAndDelete({ _id: req.params.id, isSystem: true });
     if (!rule) return res.status(404).json({ success: false, message: "Rule not found" });
     res.json({ success: true, message: "Deleted" });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Admin Verifications
+exports.getVerifications = async (req, res) => {
+  try {
+    const verifications = await VerificationRequest.find({ verificationType: "ADMIN" })
+      .populate("submittedBy", "username email avatar xp")
+      .populate("targetId")
+      .sort({ createdAt: -1 });
+    res.json({ success: true, data: verifications });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.approveVerification = async (req, res) => {
+  try {
+    const verification = await VerificationRequest.findById(req.params.id);
+    if (!verification || verification.status !== "PENDING") {
+      return res.status(404).json({ success: false, message: "Verification not found or already processed" });
+    }
+
+    verification.status = "APPROVED";
+    verification.reviewedBy = req.user._id;
+    verification.reviewedAt = new Date();
+    verification.reviewNote = req.body.note || "Approved by Admin";
+    await verification.save();
+
+    await addXP(verification.submittedBy, verification.xpAmount);
+    
+    await createRecord({
+      userId: verification.submittedBy,
+      action: "QUEST_APPROVED",
+      targetType: verification.targetType,
+      targetId: verification.targetId,
+      xpChange: verification.xpAmount,
+      message: `Quest approved by Admin. +${verification.xpAmount} XP`,
+      metadata: { reviewedBy: req.user._id, note: verification.reviewNote }
+    });
+
+    await createNotification({
+      userId: verification.submittedBy,
+      type: "PROOF_APPROVED",
+      title: "Quest Approved!",
+      message: `Your quest proof was approved by Admin. +${verification.xpAmount} XP`,
+      link: "/app/quests"
+    });
+
+    res.json({ success: true, message: "Approved" });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.rejectVerification = async (req, res) => {
+  try {
+    const verification = await VerificationRequest.findById(req.params.id);
+    if (!verification || verification.status !== "PENDING") {
+      return res.status(404).json({ success: false, message: "Verification not found or already processed" });
+    }
+
+    verification.status = "REJECTED";
+    verification.reviewedBy = req.user._id;
+    verification.reviewedAt = new Date();
+    verification.reviewNote = req.body.note || "Rejected by Admin";
+    await verification.save();
+
+    await createRecord({
+      userId: verification.submittedBy,
+      action: "QUEST_REJECTED",
+      targetType: verification.targetType,
+      targetId: verification.targetId,
+      xpChange: 0,
+      message: `Quest rejected by Admin.`,
+      metadata: { reviewedBy: req.user._id, note: verification.reviewNote }
+    });
+
+    await createNotification({
+      userId: verification.submittedBy,
+      type: "PROOF_REJECTED",
+      title: "Quest Rejected",
+      message: `Your quest proof was rejected by Admin. Reason: ${verification.reviewNote}`,
+      link: "/app/quests"
+    });
+
+    res.json({ success: true, message: "Rejected" });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Automated System Rules
+exports.getAutomatedRules = async (req, res) => {
+  try {
+    let rules = await SystemRule.find();
+    // Seed if empty
+    if (rules.length === 0) {
+      await SystemRule.create({
+        type: "DAILY_XP_MINIMUM",
+        title: "Daily XP Goal",
+        description: "If you gain less than 50 XP in a day, a penalty is applied.",
+        minXP: 50,
+        penaltyXP: 10,
+        isEnabled: true
+      });
+      rules = await SystemRule.find();
+    }
+    res.json({ success: true, data: rules });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.updateAutomatedRule = async (req, res) => {
+  try {
+    const rule = await SystemRule.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!rule) return res.status(404).json({ success: false, message: "Rule not found" });
+    res.json({ success: true, data: rule });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

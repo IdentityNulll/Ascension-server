@@ -19,4 +19,14 @@ router.get("/system/rules", ...auth, c.getSystemRules);
 router.post("/system/rules", ...auth, c.createSystemRule);
 router.patch("/system/rules/:id", ...auth, c.updateSystemRule);
 router.delete("/system/rules/:id", ...auth, c.deleteSystemRule);
+
+// Verifications
+router.get("/verifications", ...auth, c.getVerifications);
+router.post("/verifications/:id/approve", ...auth, c.approveVerification);
+router.post("/verifications/:id/reject", ...auth, c.rejectVerification);
+
+// Automated Rules
+router.get("/automated-rules", ...auth, c.getAutomatedRules);
+router.patch("/automated-rules/:id", ...auth, c.updateAutomatedRule);
+
 module.exports = router;
