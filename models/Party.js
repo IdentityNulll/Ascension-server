@@ -17,6 +17,7 @@ const partySchema = new mongoose.Schema(
     ownerId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     members: { type: [memberSchema], default: [] },
     inviteCode: { type: String, unique: true },
+    totalPartyXP: { type: Number, default: 0 },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }

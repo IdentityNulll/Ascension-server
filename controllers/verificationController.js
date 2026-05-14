@@ -1,6 +1,8 @@
 const mongoose = require("mongoose");
 const VerificationRequest = require("../models/VerificationRequest");
 const Party = require("../models/Party");
+const Quest = require("../models/Quest");
+const BadHabit = require("../models/BadHabit");
 const { createRecord } = require("../utils/record");
 const { addXP, subtractXP, addPartyXP } = require("../utils/xp");
 const { createNotification } = require("./notificationController");

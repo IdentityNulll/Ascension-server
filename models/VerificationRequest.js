@@ -6,7 +6,7 @@ const verificationRequestSchema = new mongoose.Schema(
     partyId: { type: mongoose.Schema.Types.ObjectId, ref: "Party", default: null },
     targetType: { 
       type: String, 
-      enum: ["Quest", "BadHabit"], 
+      enum: ["Quest", "BadHabit", "QUEST", "BAD_HABIT"], 
       required: true,
       set: (v) => {
         if (v === "QUEST") return "Quest";

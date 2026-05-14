@@ -23,6 +23,7 @@ const addPartyXP = async (partyId, userId, amount) => {
     });
     if (member) {
       member.xpEarned = (member.xpEarned || 0) + amount;
+      party.totalPartyXP = (party.totalPartyXP || 0) + amount;
       await party.save();
     }
     return party;
