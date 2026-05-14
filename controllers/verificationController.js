@@ -5,7 +5,10 @@ const { addXP, subtractXP, addPartyXP } = require("../utils/xp");
 const { createNotification } = require("./notificationController");
 
 const isMember = (party, userId) =>
-  party.members.some((m) => m.userId.toString() === userId.toString());
+  party.members.some((m) => {
+    const mId = m.userId?._id ? m.userId._id.toString() : (m.userId?.toString() || "");
+    return mId === userId.toString();
+  });
 
 exports.getPending = async (req, res) => {
   try {
@@ -127,6 +130,7 @@ exports.approve = async (req, res) => {
 
     res.json({ success: true, data: { verification, updatedXP: user?.xp } });
   } catch (err) {
+    console.error("Approve error:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -186,6 +190,7 @@ exports.reject = async (req, res) => {
 
     res.json({ success: true, data: { verification } });
   } catch (err) {
+    console.error("Reject error:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 };

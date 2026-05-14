@@ -270,6 +270,7 @@ exports.approveVerification = async (req, res) => {
 
     res.json({ success: true, message: "Approved", data: { verification, updatedXP: newXP } });
   } catch (err) {
+    console.error("Admin approve error:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -307,6 +308,7 @@ exports.rejectVerification = async (req, res) => {
 
     res.json({ success: true, message: "Rejected" });
   } catch (err) {
+    console.error("Admin reject error:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 };

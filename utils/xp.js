@@ -17,9 +17,12 @@ const addPartyXP = async (partyId, userId, amount) => {
   try {
     const party = await Party.findById(partyId);
     if (!party) return null;
-    const member = party.members.find((m) => m.userId.toString() === userId.toString());
+    const member = party.members.find((m) => {
+      const mId = m.userId?._id ? m.userId._id.toString() : (m.userId?.toString() || "");
+      return mId === userId.toString();
+    });
     if (member) {
-      member.xpEarned += amount;
+      member.xpEarned = (member.xpEarned || 0) + amount;
       await party.save();
     }
     return party;
