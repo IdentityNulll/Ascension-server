@@ -10,7 +10,7 @@ const upload = require("../utils/multer");
 
 const isMember = (party, userId) =>
   party.members.some((m) => {
-    const mId = m.userId._id ? m.userId._id.toString() : m.userId.toString();
+    const mId = m.userId?._id ? m.userId._id.toString() : (m.userId?.toString() || "");
     return mId === userId.toString();
   });
 

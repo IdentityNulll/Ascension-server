@@ -16,4 +16,6 @@ const questSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Quest", questSchema);
+const Quest = mongoose.model("Quest", questSchema);
+mongoose.model("QUEST", questSchema);
+module.exports = Quest;

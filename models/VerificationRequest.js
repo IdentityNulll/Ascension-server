@@ -4,7 +4,16 @@ const verificationRequestSchema = new mongoose.Schema(
   {
     submittedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     partyId: { type: mongoose.Schema.Types.ObjectId, ref: "Party", default: null },
-    targetType: { type: String, enum: ["Quest", "BadHabit"], required: true },
+    targetType: { 
+      type: String, 
+      enum: ["Quest", "BadHabit"], 
+      required: true,
+      set: (v) => {
+        if (v === "QUEST") return "Quest";
+        if (v === "BAD_HABIT") return "BadHabit";
+        return v;
+      }
+    },
     targetId: { type: mongoose.Schema.Types.ObjectId, required: true, refPath: "targetType" },
     proofFile: { type: String, default: null },
     proofNote: { type: String, default: "" },

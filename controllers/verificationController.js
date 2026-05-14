@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const VerificationRequest = require("../models/VerificationRequest");
 const Party = require("../models/Party");
 const { createRecord } = require("../utils/record");
@@ -48,12 +49,16 @@ exports.getPending = async (req, res) => {
       }
     });
   } catch (err) {
+    console.error("getPending error:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
 exports.getPartyVerifications = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: "Invalid Party ID" });
+    }
     const party = await Party.findById(req.params.id);
     if (!party || !isMember(party, req.user._id))
       return res.status(403).json({ success: false, message: "Not a member" });
@@ -66,6 +71,7 @@ exports.getPartyVerifications = async (req, res) => {
       .sort({ createdAt: -1 });
     res.json({ success: true, data: verifications });
   } catch (err) {
+    console.error("getPartyVerifications error:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 };

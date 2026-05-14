@@ -13,4 +13,6 @@ const badHabitSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("BadHabit", badHabitSchema);
+const BadHabit = mongoose.model("BadHabit", badHabitSchema);
+mongoose.model("BAD_HABIT", badHabitSchema);
+module.exports = BadHabit;
