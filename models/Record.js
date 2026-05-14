@@ -7,7 +7,7 @@ const recordSchema = new mongoose.Schema(
     action: { type: String, required: true },
     targetType: {
       type: String,
-      enum: ["QUEST", "BAD_HABIT", "RULE", "SHOP", "PARTY", "AUTH", "SYSTEM"],
+      enum: ["QUEST", "BAD_HABIT", "RULE", "SHOP", "PARTY", "AUTH", "SYSTEM", "SHOP_ITEM", "DAILY_GIFT"],
       required: true,
     },
     targetId: { type: mongoose.Schema.Types.ObjectId, default: null },
