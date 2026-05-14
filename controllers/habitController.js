@@ -67,7 +67,7 @@ exports.applyHabit = async (req, res) => {
       const party = await Party.findById(habit.partyId);
       if (!party || !isMember(party, req.user._id)) return res.status(403).json({ success: false, message: "Not a party member" });
       const verification = await VerificationRequest.create({
-        submittedBy: req.user._id, partyId: habit.partyId, targetType: "BAD_HABIT",
+        submittedBy: req.user._id, partyId: habit.partyId, targetType: "BadHabit",
         targetId: habit._id, xpAmount: habit.xpPenalty, mode: "PARTY",
         proofNote: req.body.note || ""
       });

@@ -246,13 +246,14 @@ exports.approveVerification = async (req, res) => {
     verification.reviewedAt = new Date();
     verification.reviewNote = req.body.note || "Approved by Admin";
     await verification.save();
-
-    await addXP(verification.submittedBy, verification.xpAmount);
+    
+    const updatedUser = await addXP(verification.submittedBy, verification.xpAmount);
+    const newXP = updatedUser?.xp || 0;
     
     await createRecord({
       userId: verification.submittedBy,
       action: "QUEST_APPROVED",
-      targetType: verification.targetType,
+      targetType: verification.targetType?.toUpperCase(),
       targetId: verification.targetId,
       xpChange: verification.xpAmount,
       message: `Quest approved by Admin. +${verification.xpAmount} XP`,
@@ -267,7 +268,7 @@ exports.approveVerification = async (req, res) => {
       link: "/app/quests"
     });
 
-    res.json({ success: true, message: "Approved" });
+    res.json({ success: true, message: "Approved", data: { verification, updatedXP: newXP } });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -289,7 +290,7 @@ exports.rejectVerification = async (req, res) => {
     await createRecord({
       userId: verification.submittedBy,
       action: "QUEST_REJECTED",
-      targetType: verification.targetType,
+      targetType: verification.targetType?.toUpperCase(),
       targetId: verification.targetId,
       xpChange: 0,
       message: `Quest rejected by Admin.`,

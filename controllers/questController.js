@@ -63,7 +63,7 @@ exports.submitProof = async (req, res) => {
     const proofNote = req.body.note || "";
     const verification = await VerificationRequest.create({
       submittedBy: req.user._id,
-      targetType: "QUEST",
+      targetType: "Quest",
       targetId: quest._id,
       proofFile,
       proofNote,

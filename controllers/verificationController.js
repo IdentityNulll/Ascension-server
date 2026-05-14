@@ -11,16 +11,39 @@ exports.getPending = async (req, res) => {
   try {
     const parties = await Party.find({ "members.userId": req.user._id });
     const partyIds = parties.map((p) => p._id);
-    const pending = await VerificationRequest.find({
+    
+    // Party verifications
+    const partyVerifs = await VerificationRequest.find({
+      mode: "PARTY",
       partyId: { $in: partyIds },
       status: "PENDING",
       submittedBy: { $ne: req.user._id },
     })
-      .populate("submittedBy", "username email avatar")
+      .populate("submittedBy", "username email avatar xp")
       .populate("targetId")
       .populate("partyId", "name")
       .sort({ createdAt: -1 });
-    res.json({ success: true, data: pending });
+
+    // Solo verifications (only if admin)
+    let soloVerifs = [];
+    if (req.user.role === "ADMIN") {
+      soloVerifs = await VerificationRequest.find({
+        mode: "SOLO",
+        verificationType: "ADMIN",
+        status: "PENDING"
+      })
+      .populate("submittedBy", "username email avatar xp")
+      .populate("targetId")
+      .sort({ createdAt: -1 });
+    }
+
+    res.json({ 
+      success: true, 
+      data: {
+        solo: soloVerifs,
+        party: partyVerifs
+      }
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -62,12 +85,16 @@ exports.approve = async (req, res) => {
           success: false,
           message: "Cannot approve your own submission",
         });
+    if (verification.verificationType === "ADMIN" && req.user.role !== "ADMIN") {
+      return res.status(403).json({ success: false, message: "Only admins can approve this" });
+    }
+
     if (verification.partyId) {
       const party = await Party.findById(verification.partyId);
       if (!party || !isMember(party, req.user._id))
         return res
           .status(403)
-          .json({ success: false, message: "Not a member" });
+          .json({ success: false, message: "Not a member of this party" });
     }
     verification.status = "APPROVED";
     verification.reviewedBy = req.user._id;
@@ -79,7 +106,7 @@ exports.approve = async (req, res) => {
       userId: verification.submittedBy,
       partyId: verification.partyId,
       action: "QUEST_APPROVED",
-      targetType: "QUEST",
+      targetType: verification.targetType?.toUpperCase(),
       targetId: verification.targetId,
       xpChange: verification.xpAmount,
       message: `Proof approved. +${verification.xpAmount} XP`,
@@ -94,11 +121,11 @@ exports.approve = async (req, res) => {
       userId: verification.submittedBy,
       type: "PROOF_APPROVED",
       title: "Proof Approved!",
-      message: `Your proof for quest was approved by ${req.user.username}. +${verification.xpAmount} XP`,
-      link: `/records`,
+      message: `Your proof for ${verification.targetType} was approved by ${req.user.username}. +${verification.xpAmount} XP`,
+      link: `/app/quests`,
     });
 
-    res.json({ success: true, data: { verification, newXP: user?.xp } });
+    res.json({ success: true, data: { verification, updatedXP: user?.xp } });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -120,6 +147,10 @@ exports.reject = async (req, res) => {
         .status(403)
         .json({ success: false, message: "Cannot reject your own submission" });
 
+    if (verification.verificationType === "ADMIN" && req.user.role !== "ADMIN") {
+      return res.status(403).json({ success: false, message: "Only admins can reject this" });
+    }
+
     if (verification.partyId) {
       const party = await Party.findById(verification.partyId);
       if (!party || !isMember(party, req.user._id))
@@ -131,14 +162,14 @@ exports.reject = async (req, res) => {
     verification.status = "REJECTED";
     verification.reviewedBy = req.user._id;
     verification.reviewedAt = new Date();
-    verification.reviewNote = req.body.note || "";
+    verification.reviewNote = req.body?.note || "";
     await verification.save();
 
     await createRecord({
       userId: verification.submittedBy,
       partyId: verification.partyId,
       action: "QUEST_REJECTED",
-      targetType: "QUEST",
+      targetType: verification.targetType?.toUpperCase(),
       targetId: verification.targetId,
       xpChange: 0,
       message: `Proof rejected.`,
@@ -149,11 +180,11 @@ exports.reject = async (req, res) => {
       userId: verification.submittedBy,
       type: "PROOF_REJECTED",
       title: "Proof Rejected",
-      message: `Your proof for quest was rejected by ${req.user.username}. Reason: ${verification.reviewNote || "No reason provided"}`,
+      message: `Your proof for ${verification.targetType} was rejected by ${req.user.username}. Reason: ${verification.reviewNote || "No reason provided"}`,
       link: `/app/verifications`,
     });
 
-    res.json({ success: true, data: verification });
+    res.json({ success: true, data: { verification } });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

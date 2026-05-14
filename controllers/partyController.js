@@ -182,7 +182,7 @@ exports.submitPartyProof = async (req, res) => {
     if (!party || !isMember(party, req.user._id)) return res.status(403).json({ success: false, message: "Not a member" });
     const proofFile = req.file ? req.file.filename : null;
     const proofNote = req.body.note || "";
-    const verification = await VerificationRequest.create({ submittedBy: req.user._id, partyId: quest.partyId, targetType: "QUEST", targetId: quest._id, proofFile, proofNote, xpAmount: quest.xpReward, mode: "PARTY" });
+    const verification = await VerificationRequest.create({ submittedBy: req.user._id, partyId: quest.partyId, targetType: "Quest", targetId: quest._id, proofFile, proofNote, xpAmount: quest.xpReward, mode: "PARTY" });
     await createRecord({ userId: req.user._id, partyId: quest.partyId, action: "PROOF_SUBMITTED", targetType: "QUEST", targetId: quest._id, message: `Party proof submitted for: ${quest.title}` });
     
     // Notify other members
