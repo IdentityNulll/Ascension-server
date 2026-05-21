@@ -15,6 +15,7 @@ const shopRoutes = require("./routes/shop");
 const recordRoutes = require("./routes/records");
 const adminRoutes = require("./routes/admin");
 const notificationRoutes = require("./routes/notifications");
+const reportRoutes = require("./routes/reports");
 
 
 const { initCron } = require("./utils/cron");
@@ -37,6 +38,7 @@ app.use("/api/shop", shopRoutes);
 app.use("/api/records", recordRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/reports", reportRoutes);
 
 
 app.use((err, req, res, next) => {
