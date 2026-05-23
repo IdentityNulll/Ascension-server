@@ -25,14 +25,24 @@ exports.login = async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ success: false, message: "Email and password required" });
     const user = await User.findOne({ email });
-    if (!user || !(await user.comparePassword(password))) return res.status(401).json({ success: false, message: "Invalid credentials" });
+    if (!user) {
+      console.log(`[AUTH] Login failed — no user with email: ${email}`);
+      return res.status(401).json({ success: false, message: "Invalid credentials" });
+    }
+    const passwordMatch = await user.comparePassword(password);
+    if (!passwordMatch) {
+      console.log(`[AUTH] Login failed — wrong password for user: ${user.username} (${email})`);
+      return res.status(401).json({ success: false, message: "Invalid credentials" });
+    }
     if (!user.isActive) return res.status(403).json({ success: false, message: "Account disabled" });
     user.lastLoginAt = new Date();
     await user.save();
     await createRecord({ userId: user._id, action: "LOGIN", targetType: "AUTH", message: "User logged in" });
     const token = signToken(user._id);
+    console.log(`[AUTH] Login success — user: ${user.username} (${email})`);
     res.json({ success: true, data: { token, user } });
   } catch (err) {
+    console.error("[AUTH] Login error:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 };
