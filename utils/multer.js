@@ -12,6 +12,6 @@ const fileFilter = (req, file, cb) => {
   else cb(new Error("Invalid file type"), false);
 };
 
-const upload = multer({ storage, fileFilter, limits: { fileSize: 10 * 1024 * 1024 } });
+const upload = multer({ storage, fileFilter, limits: { fileSize: 50 * 1024 * 1024 } });
 
 module.exports = upload;
